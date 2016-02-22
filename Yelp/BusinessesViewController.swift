@@ -8,20 +8,23 @@
 
 import UIKit
 
-class BusinessesViewController: UIViewController, UITableViewDataSource, UITableViewDelegate {
+class BusinessesViewController: UIViewController, UITableViewDataSource, UITableViewDelegate, UISearchBarDelegate {
 
     var businesses: [Business]!
-    
+    var searchBar = UISearchBar()
+    var filteredData : [Business]!
     @IBOutlet weak var tableView: UITableView!
     override func viewDidLoad() {
         super.viewDidLoad()
+        searchBar.delegate = self
         tableView.delegate = self
         tableView.dataSource = self
         tableView.rowHeight = UITableViewAutomaticDimension
         tableView.estimatedRowHeight = 120
-        
+        navigationItem.titleView = searchBar
         Business.searchWithTerm("Thai", completion: { (businesses: [Business]!, error: NSError!) -> Void in
             self.businesses = businesses
+            self.filteredData = businesses
             self.tableView.reloadData()
             for business in businesses {
                 print(business.name!)
@@ -40,9 +43,44 @@ class BusinessesViewController: UIViewController, UITableViewDataSource, UITable
         }
 */
     }
+    // This method updates filteredData based on the text in the Search Box
+    func searchBar(searchBar: UISearchBar, textDidChange searchText: String) {
+        //print("gets here")
+        // When there is no text, filteredData is the same as the original data
+        if searchText.isEmpty {
+            filteredData = businesses
+        } else {
+            // The user has entered text into the search box
+            // Use the filter method to iterate over all items in the data array
+            // For each item, return true if the item should be included and false if the
+            // item should NOT be included
+            self.filteredData = businesses?.filter({(busObj: Business) -> Bool in
+                // If dataItem matches the searchText, return true to include it
+                let businessTitle = busObj.name! as String
+
+                if businessTitle.rangeOfString(searchText, options: .CaseInsensitiveSearch) != nil{
+                    return true
+                } else {
+                    return false
+                }
+            })
+            
+        }
+        tableView.reloadData()
+    }
+    func searchBarTextDidBeginEditing(searchBar: UISearchBar) {
+        self.searchBar.showsCancelButton = true
+        tableView.reloadData()
+    }
+    func searchBarCancelButtonClicked(searchBar: UISearchBar) {
+        searchBar.showsCancelButton = false
+        searchBar.text = ""
+        searchBar.resignFirstResponder()
+        tableView.reloadData()
+    }
     func tableView(tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        if businesses != nil {
-            return businesses!.count
+        if filteredData != nil {
+            return filteredData!.count
         } else {
             return 0
         }
@@ -50,7 +88,7 @@ class BusinessesViewController: UIViewController, UITableViewDataSource, UITable
     func tableView(tableView: UITableView, cellForRowAtIndexPath indexPath: NSIndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCellWithIdentifier("BusinessCell", forIndexPath: indexPath) as! BusinessCell
         
-        cell.business = businesses[indexPath.row]
+        cell.business = filteredData[indexPath.row]
         return cell
     }
 
